@@ -16,16 +16,16 @@ public class AdoptionService {
     private void seedPets() {
         pets.add(new Dog("D001", "Bubbles", "Puppy (2 weeks old)", "Female", "Aspin", "Brown and white", "Small", "Short", "House-trained", 800, true));
         pets.add(new Cat("C001", "Blossom", "Adult (2 years old)", "Female", "Puspin", "Calico", "Small", "Short", "House-trained", 600, true));
-        pets.add(new Dog("D002", "Buttercup", "Adult (3 years old)", "Female", "Shih Tzu", "White", "Small", "Long", "Special needs: regular grooming", 2500, true));
+        pets.add(new Dog("D002", "Buttercup", "Adult (3 years old)", "Female", "Shih Tzu", "White", "Small", "Long", "Special needs: partially blind in left eye", 2500, true));
         pets.add(new Cat("C002", "Mojo", "Adult (1 year old)", "Male", "Maine Coon", "Gray", "Large", "Long", "House-trained", 4200, true));
         pets.add(new Dog("D003", "Sugar", "Adult (4 years old)", "Female", "Golden Retriever", "Gold", "Large", "Medium", "House-trained", 3500, true));
-        pets.add(new Cat("C003", "Puff", "Kitten (3 months old)", "Male", "Siamese", "Cream", "Small", "Short", "Special needs: quiet room", 1800, true));
+        pets.add(new Cat("C003", "Puff", "Kitten (3 months old)", "Male", "Siamese", "Cream", "Small", "Short", "Special needs: quiet environment needed", 1800, true));
         pets.add(new Dog("D004", "Ace", "Adult (2 years old)", "Male", "German Shepherd", "Black and tan", "Large", "Medium", "House-trained", 3900, true));
         pets.add(new Cat("C004", "Fifi", "Adult (5 years old)", "Female", "British Shorthair", "Blue-gray", "Medium", "Short", "House-trained", 2200, true));
-        pets.add(new Dog("D005", "Taffy", "Puppy (4 months old)", "Male", "Pomeranian", "Orange", "Small", "Long", "Special needs: daily brushing", 3000, true));
+        pets.add(new Dog("D005", "Taffy", "Puppy (4 months old)", "Male", "Pomeranian", "Orange", "Small", "Long", "Special needs: daily grooming required", 3000, true));
         pets.add(new Cat("C005", "Ming", "Adult (3 years old)", "Male", "Puspin", "Black", "Small", "Short", "House-trained", 400, true));
         pets.add(new Dog("D006", "Kiko", "Adult (6 years old)", "Male", "Aspin", "White", "Medium", "Short", "House-trained", 300, true));
-        pets.add(new Cat("C006", "Peach", "Adult (2 years old)", "Female", "Puspin", "Orange", "Small", "Short", "House-trained", 500, true));
+        pets.add(new Cat("C006", "Peach", "Adult (2 years old)", "Female", "Puspin", "Orange", "Small", "Short", "Special needs: hard of hearing", 500, true));
     }
     private void loadSavedData() {
         profile = store.loadProfile();
@@ -113,6 +113,29 @@ public class AdoptionService {
                 a.setStatus(Appointment.Status.COMPLETED); 
                 saveAsync(); return; 
             }
+    }
+    
+    public synchronized void deleteAppointment(String id) {
+        Iterator<Appointment> iterator =
+                appointments.iterator();
+
+        while (iterator.hasNext()) {
+            Appointment appointment =
+                    iterator.next();
+
+            if (appointment.getId().equals(id)) {
+                occupiedSlots.remove(
+                        appointment.getDate()
+                                + "@"
+                                + appointment.getTime()
+                );
+
+                appointment.getPet().setAvailable(true);
+                iterator.remove();
+                saveAsync();
+                return;
+            }
+        }
     }
     
     private void saveAsync() {

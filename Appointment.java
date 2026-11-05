@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class Appointment {
-    public enum Status { SCHEDULED, COMPLETED, CANCELLED }
+    public enum Status {
+        SCHEDULED, COMPLETED, CANCELLED 
+    }
     private final String id, petId; 
     private final Pet pet; 
     private final AdopterProfile profile;

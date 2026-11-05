@@ -15,8 +15,12 @@ public class DataStore {
     
     public synchronized void saveNow(AdopterProfile profile, List<Appointment> appointments) {
         try { Files.createDirectories(folder); 
-        if (profile != null) 
-            Files.write(folder.resolve("profile.txt"), Collections.singletonList(profile.toFileLine()));
+        Path profileFile = folder.resolve("profile.txt");
+        if (profile != null) {
+            Files.write(profileFile, Collections.singletonList(profile.toFileLine()));
+        } else {
+            Files.deleteIfExists(profileFile);
+        }
             List<String> lines = new ArrayList<>(); 
             for (Appointment a : appointments) lines.add(a.toFileLine()); 
                 Files.write(folder.resolve("appointments.txt"), lines); 
