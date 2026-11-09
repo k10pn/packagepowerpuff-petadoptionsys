@@ -11,7 +11,8 @@ public class JdbcIntegration {
     public void exportAppointments(List<Appointment> appointments) throws SQLException {
         try (Connection connection = DriverManager.getConnection(url); 
             Statement statement = connection.createStatement()) {
-                statement.executeUpdate("CREATE TABLE IF NOT EXISTS appointments (id TEXT PRIMARY KEY, pet_name TEXT, adopter_name TEXT, appointment_date TEXT, appointment_time TEXT, status TEXT)");
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS appointments (id TEXT PRIMARY KEY, pet_name TEXT, adopter_name TEXT, "
+                        + "appointment_date TEXT, appointment_time TEXT, status TEXT)");
                 String sql = "INSERT OR REPLACE INTO appointments VALUES (?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = connection.prepareStatement(sql)) { 
                     for (Appointment a : appointments) { 

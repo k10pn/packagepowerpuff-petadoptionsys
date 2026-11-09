@@ -5,30 +5,57 @@ import java.time.LocalTime;
 import java.util.*;
 
 public class AdoptionService {
-    private static final int PAGE_SIZE = 5;
+    private static final int PAGE_SIZE = 9;
     private final List<Pet> pets = new ArrayList<>();
     private final List<Appointment> appointments = new ArrayList<>();
     private final Set<String> occupiedSlots = new HashSet<>();
     private final DataStore store = new DataStore();
+    private final List<AdopterProfile> profiles = new ArrayList<>();
     private AdopterProfile profile;
 
     public AdoptionService() { seedPets(); loadSavedData(); }
     private void seedPets() {
-        pets.add(new Dog("D001", "Bubbles", "Puppy (2 weeks old)", "Female", "Aspin", "Brown and white", "Small", "Short", "House-trained", 800, true));
-        pets.add(new Cat("C001", "Blossom", "Adult (2 years old)", "Female", "Puspin", "Calico", "Small", "Short", "House-trained", 600, true));
-        pets.add(new Dog("D002", "Buttercup", "Adult (3 years old)", "Female", "Shih Tzu", "White", "Small", "Long", "Special needs: partially blind in left eye", 2500, true));
+        pets.add(new Dog("D001", "Bubbles", "Puppy (2 weeks old)", "Female", "Aspin", "Brown and white", "Small", "Short", "House-trained", 
+                        800, true));
+        pets.add(new Cat("C001", "Blossom", "Adult (2 years old)", "Female", "Puspin", "Calico", "Small", "Short", "House-trained", 
+                        600, true));
+        pets.add(new Dog("D002", "Buttercup", "Adult (3 years old)", "Female", "Shih Tzu", "White", "Small", "Long", 
+                         "Special needs: partially blind in left eye", 2500, true));
         pets.add(new Cat("C002", "Mojo", "Adult (1 year old)", "Male", "Maine Coon", "Gray", "Large", "Long", "House-trained", 4200, true));
-        pets.add(new Dog("D003", "Sugar", "Adult (4 years old)", "Female", "Golden Retriever", "Gold", "Large", "Medium", "House-trained", 3500, true));
-        pets.add(new Cat("C003", "Puff", "Kitten (3 months old)", "Male", "Siamese", "Cream", "Small", "Short", "Special needs: quiet environment needed", 1800, true));
-        pets.add(new Dog("D004", "Ace", "Adult (2 years old)", "Male", "German Shepherd", "Black and tan", "Large", "Medium", "House-trained", 3900, true));
-        pets.add(new Cat("C004", "Fifi", "Adult (5 years old)", "Female", "British Shorthair", "Blue-gray", "Medium", "Short", "House-trained", 2200, true));
-        pets.add(new Dog("D005", "Taffy", "Puppy (4 months old)", "Male", "Pomeranian", "Orange", "Small", "Long", "Special needs: daily grooming required", 3000, true));
+        pets.add(new Dog("D003", "Sugar", "Adult (4 years old)", "Female", "Golden Retriever", "Gold", "Large", "Medium", "House-trained", 
+                        3500, true));
+        pets.add(new Cat("C003", "Puff", "Kitten (3 months old)", "Male", "Siamese", "Cream", "Small", "Short", 
+                        "Special needs: quiet environment needed", 3250, true));
+        pets.add(new Dog("D004", "Ace", "Adult (2 years old)", "Male", "German Shepherd", "Black and tan", "Large", "Medium", 
+                        "House-trained", 3900, true));
+        pets.add(new Cat("C004", "Fifi", "Adult (5 years old)", "Female", "British Shorthair", "Blue-gray", "Medium", "Short", 
+                        "House-trained", 2200, true));
+        pets.add(new Dog("D005", "Taffy", "Puppy (4 months old)", "Male", "Pomeranian", "Orange", "Small", "Long", 
+                        "Special needs: daily grooming required", 3250, true));
         pets.add(new Cat("C005", "Ming", "Adult (3 years old)", "Male", "Puspin", "Black", "Small", "Short", "House-trained", 400, true));
         pets.add(new Dog("D006", "Kiko", "Adult (6 years old)", "Male", "Aspin", "White", "Medium", "Short", "House-trained", 300, true));
-        pets.add(new Cat("C006", "Peach", "Adult (2 years old)", "Female", "Puspin", "Orange", "Small", "Short", "Special needs: hard of hearing", 500, true));
+        pets.add(new Cat("C006", "Peach", "Adult (2 years old)", "Female", "Puspin", "Orange", "Small", "Short", 
+                        "Special needs: hard of hearing", 550, true));
+        pets.add(new Dog("D007", "Sky", "Adult (2 years old)", "Female", "Siberian Husky", "Gray and white", "Large", "Medium", 
+                        "House-trained", 4500, true));
+        pets.add(new Dog("D008", "Mochi", "Adult (1 year old)", "Female", "Maltese", "White", "Small", "Long", 
+                        "Special needs: daily grooming required", 2800, true));
+        pets.add(new Dog("D009", "Bruno", "Adult (3 years old)", "Male", "Pug", "Fawn", "Small", "Short", 
+                        "House-trained", 2200, true));
+        pets.add(new Dog("D010", "Duke", "Adult (4 years old)", "Male", "Bulldog", "White and brown", "Medium", "Short", 
+                        "Special needs: regular exercise", 3200, true));
+        pets.add(new Cat("C007", "Luna", "Adult (2 years old)", "Female", "Persian", "White", "Medium", "Long", 
+                        "House-trained", 3600, true));
+        pets.add(new Cat("C008", "Cleo", "Adult (3 years old)", "Female", "Somali", "Ruddy", "Medium", "Long", 
+                        "House-trained", 3000, true));
+        pets.add(new Cat("C009", "Nibbles", "Kitten (5 months old)", "Male", "Munchkin", "Orange and white", "Small", "Short", 
+                        "Special needs: cerebellar hypoplasia", 3500, true));
+        pets.add(new Cat("C010", "Tofu", "Adult (1 year old)", "Male", "Puspin", "Gray and white", "Small", "Short", 
+                        "Special needs: feline asthma", 1250, true));
     }
     private void loadSavedData() {
-        profile = store.loadProfile();
+        profiles.addAll(store.loadProfiles());
+        if (!profiles.isEmpty()) profile = profiles.get(0);
         Map<String, Pet> petMap = new HashMap<>();
         for (Pet pet : pets) petMap.put(pet.getId(), pet);
         for (String line : store.loadAppointmentLines()) {
@@ -76,9 +103,67 @@ public class AdoptionService {
     public AdopterProfile getProfile() {
         return profile; 
     } 
-    
+
+    public List<AdopterProfile> getProfiles() {
+        return new ArrayList<>(profiles);
+    }
+
+    public List<AdopterProfile> getProfilePage(int page) {
+        int start = page * PAGE_SIZE;
+        if (start >= profiles.size()) return Collections.emptyList();
+        return new ArrayList<>(profiles.subList(start, Math.min(start + PAGE_SIZE, profiles.size())));
+    }
+
+    public int profilePageCount() {
+        return Math.max(1, (profiles.size() + PAGE_SIZE - 1) / PAGE_SIZE);
+    }
+
+    public synchronized void addProfile(AdopterProfile newProfile) {
+        ensureUniqueName(newProfile.getFullName(), null);
+        profiles.add(newProfile);
+        profile = newProfile;
+        saveAsync();
+    }
+
+    public synchronized void updateProfile(AdopterProfile oldProfile, AdopterProfile updatedProfile) {
+        ensureUniqueName(updatedProfile.getFullName(), oldProfile);
+        int index = profiles.indexOf(oldProfile);
+        if (index < 0) throw new IllegalArgumentException("That profile no longer exists.");
+        profiles.set(index, updatedProfile);
+        if (profile == oldProfile) profile = updatedProfile;
+        saveAsync();
+    }
+
+    public synchronized void removeProfile(AdopterProfile target) {
+        profiles.remove(target);
+        if (profile == target) profile = profiles.isEmpty() ? null : profiles.get(0);
+        saveAsync();
+    }
+
+    public void selectProfile(AdopterProfile selectedProfile) {
+        if (profiles.contains(selectedProfile)) profile = selectedProfile;
+    }
+
+    private void ensureUniqueName(String name, AdopterProfile excluded) {
+        String normalized = name.trim().toLowerCase(Locale.ROOT);
+        for (AdopterProfile existing : profiles) {
+            if (existing != excluded
+                    && existing.getFullName().trim().toLowerCase(Locale.ROOT).equals(normalized)) {
+                throw new IllegalArgumentException("A profile with that full name already exists.");
+            }
+        }
+    }
+
     public void setProfile(AdopterProfile p) {
-        profile = p; saveAsync(); 
+        if (p == null) {
+            profile = null;
+        } else if (!profiles.contains(p)) {
+            addProfile(p);
+            return;
+        } else {
+            profile = p;
+        }
+        saveAsync(); 
     }
     
     public synchronized void bookAppointment(Pet pet, AdopterProfile adopter, LocalDate date, LocalTime time) {
@@ -89,9 +174,11 @@ public class AdoptionService {
         String key = date + "@" + time; 
         if (occupiedSlots.contains(key)) 
             throw new IllegalArgumentException("That date and time are already unavailable.");
-        appointments.add(new Appointment("A" + String.format("%03d", appointments.size() + 1), pet, adopter, date, time, Appointment.Status.SCHEDULED)); 
+        appointments.add(new Appointment("A" + String.format("%03d", appointments.size() + 1), pet, adopter, date, time, 
+                        Appointment.Status.SCHEDULED)); 
         occupiedSlots.add(key); 
         pet.setAvailable(false); 
+        if (!profiles.contains(adopter)) profiles.add(adopter);
         profile = adopter; 
         saveAsync();
     }
@@ -139,11 +226,11 @@ public class AdoptionService {
     }
     
     private void saveAsync() {
-        store.save(profile, appointments); 
+        store.save(new ArrayList<>(profiles), appointments); 
     }
     
     public void saveNow() {
-        store.saveNow(profile, appointments); 
+        store.saveNow(new ArrayList<>(profiles), appointments); 
         store.close(); 
     }
 }

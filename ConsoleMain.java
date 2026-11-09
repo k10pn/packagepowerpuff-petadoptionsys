@@ -22,7 +22,7 @@ public class ConsoleMain {
                     + "=============================");
             System.out.println("[1] Find a Pet / Browse");
             System.out.println("[2] List of Appointments");
-            System.out.println("[3] Fill in Information");
+            System.out.println("[3] Adopter Profiles");
             System.out.println("[4] Exit and Save");
             
             int choice = InputValidator.readInt(scanner, "Choose: ", 1, 4);

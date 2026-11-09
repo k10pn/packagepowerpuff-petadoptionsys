@@ -6,5 +6,7 @@ public class Dog extends Pet {
                String coat, String care, int price, boolean available) {
         super(id, name, age, gender, breed, color, size, coat, care, price, available);
     }
-    @Override public String getSpecies() { return "Dog"; }
+    @Override public String getSpecies() { 
+        return "Dog"; 
+    }
 }

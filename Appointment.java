@@ -57,7 +57,8 @@ public class Appointment {
     }
     
     public String details() {
-        return "Appointment: " + id + "\nPet: " + pet.getName() + " (" + pet.getSpecies() + ")\nAdopter: " + profile.getFullName() + "\nDate: " + date + "\nTime: " + time + "\nStatus: " + status; 
+        return "Appointment: " + id + "\nPet: " + pet.getName() + " (" + pet.getSpecies() + ")\nAdopter: " + profile.getFullName() 
+                + "\nDate: " + date + "\nTime: " + time + "\nStatus: " + status; 
     }
     
     public String toFileLine() {

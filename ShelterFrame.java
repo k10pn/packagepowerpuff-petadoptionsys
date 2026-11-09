@@ -22,8 +22,13 @@ public class ShelterFrame extends JFrame {
             new DefaultListModel<>();
     private final JList<String> petList =
             new JList<>(petModel);
+    private final DefaultListModel<String> profileModel =
+            new DefaultListModel<>();
+    private final JList<String> profileList =
+            new JList<>(profileModel);
 
     private int page = 0;
+    private int profilePage = 0;
     private String category = "ALL";
 
     public ShelterFrame(AdoptionService service) {
@@ -54,6 +59,7 @@ public class ShelterFrame extends JFrame {
 
     private static final String HOME_SCREEN = "HOME";
     private static final String BROWSE_SCREEN = "BROWSE";
+    private static final String PROFILES_SCREEN = "PROFILES";
     
     private void styleOptionButtons(
         Container container
@@ -151,6 +157,16 @@ public class ShelterFrame extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    private void showProfilesScreen() {
+        JPanel profilesPanel = createProfilesPanel();
+        contentPanel.add(profilesPanel, PROFILES_SCREEN);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+        cardLayout.show(contentPanel, PROFILES_SCREEN);
+        pack();
+        setLocationRelativeTo(null);
+    }
+
     private void build() {
         JPanel root = new JPanel(new BorderLayout(10, 10));
         root.setBorder(
@@ -206,7 +222,7 @@ public class ShelterFrame extends JFrame {
         );
 
         JButton browse = new JButton("Find a Pet / Browse");
-        JButton profile = new JButton("Fill in Information");
+        JButton profile = new JButton("Adopter Profiles");
         JButton appointments = new JButton("List of Appointments");
         JButton exit = new JButton("Exit and Save");
 
@@ -275,7 +291,7 @@ public class ShelterFrame extends JFrame {
         
 
         browse.addActionListener(e -> showBrowseScreen());
-        profile.addActionListener(e -> profileDialog());
+        profile.addActionListener(e -> showProfilesScreen());
         appointments.addActionListener(e -> appointmentsDialog());
 
         exit.addActionListener(e -> {
@@ -380,6 +396,96 @@ public class ShelterFrame extends JFrame {
         });
 
         return panel;
+    }
+
+    private void refreshProfiles() {
+        profileModel.clear();
+        for (AdopterProfile adopter : service.getProfilePage(profilePage)) {
+            profileModel.addElement(adopter.getFullName()
+                    + " — " + adopter.getAge()
+                    + ", " + adopter.getGender());
+        }
+    }
+
+    private JPanel createProfilesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
+        panel.setPreferredSize(new Dimension(850, 400));
+
+        profileList.setFont(new Font("SansSerif", Font.PLAIN, 23));
+        profileList.setFixedCellHeight(34);
+
+        JPanel nav = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
+        JButton previous = new JButton("Previous");
+        JButton next = new JButton("Next");
+        JButton add = new JButton("Add Profile");
+        JButton edit = new JButton("View Profile");
+        JButton back = new JButton("Back");
+
+        JButton[] buttons = {previous, next, add, edit, back};
+        for (JButton button : buttons) {
+            styleButton(button);
+            nav.add(button);
+        }
+
+        panel.add(new JScrollPane(profileList), BorderLayout.CENTER);
+        panel.add(nav, BorderLayout.SOUTH);
+
+        profilePage = 0;
+        refreshProfiles();
+
+        previous.addActionListener(e -> {
+            if (profilePage > 0) {
+                profilePage--;
+                refreshProfiles();
+            }
+        });
+
+        next.addActionListener(e -> {
+            if (profilePage + 1 < service.profilePageCount()) {
+                profilePage++;
+                refreshProfiles();
+            }
+        });
+
+        add.addActionListener(e -> {
+            profileDialog(null, false);
+            refreshProfiles();
+        });
+
+        edit.addActionListener(e -> {
+            AdopterProfile selected = selectedProfile();
+            if (selected != null) {
+                profileDetailsDialog(selected);
+                refreshProfiles();
+            }
+        });
+
+        profileList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                AdopterProfile selected = selectedProfile();
+                if (selected != null) service.selectProfile(selected);
+            }
+        });
+
+        profileList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && selectedProfile() != null) {
+                    profileDetailsDialog(selectedProfile());
+                    refreshProfiles();
+                }
+            }
+        });
+
+        back.addActionListener(e -> showHomeScreen());
+        return panel;
+    }
+
+    private AdopterProfile selectedProfile() {
+        int selectedIndex = profileList.getSelectedIndex();
+        List<AdopterProfile> currentProfiles = service.getProfilePage(profilePage);
+        if (selectedIndex < 0 || selectedIndex >= currentProfiles.size()) return null;
+        return currentProfiles.get(selectedIndex);
     }
     
     private ImageIcon createSquarePetIcon(
@@ -619,15 +725,10 @@ public class ShelterFrame extends JFrame {
             return;
         }
 
-        AdopterProfile profile = service.getProfile();
+        AdopterProfile profile = selectProfileForAdoption();
+        if (profile == null) return;
 
-        if (profile == null) {
-            profile = profileDialog();
-        }
-
-        if (profile == null) {
-            return;
-        }
+        if (!showSelectedProfileForAdoption(profile)) return;
 
         if (profile.getAge() < 18) {
             showUnderageDialog();
@@ -741,7 +842,6 @@ public class ShelterFrame extends JFrame {
                             "Set Appointment"
                     );
 
-            // Makes Cancel and Proceed match the other buttons
             styleOptionButtons(appointmentPane);
 
             appointmentDialog.setVisible(true);
@@ -899,6 +999,208 @@ public class ShelterFrame extends JFrame {
         });
     }
 
+    private AdopterProfile profileDialog(AdopterProfile existingProfile, boolean editing) {
+        ImageIcon adopterIcon = loadScaledIcon(
+                "/petadoptionsystem/images/adoptinfo.png", 120);
+
+        JTextField name = new JTextField(existingProfile == null ? "" : existingProfile.getFullName());
+        JComboBox<String> gender = new JComboBox<>(new String[]{"Female", "Male", "Other"});
+        styleProfileDropdown(gender);
+        if (existingProfile != null) gender.setSelectedItem(existingProfile.getGender());
+        JTextField address = new JTextField(existingProfile == null ? "" : existingProfile.getAddress());
+        JTextField age = new JTextField(existingProfile == null ? "" : String.valueOf(existingProfile.getAge()));
+        JTextField phone = new JTextField(existingProfile == null ? "" : existingProfile.getPhoneNumber());
+        JTextField living = new JTextField(existingProfile == null ? "" : existingProfile.getLivingSituation());
+
+        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
+        String[] labels = {"Full name:", "Gender:", "Address:", "Age:", "Phone number:", "Living situation:"};
+        JComponent[] fields = {name, gender, address, age, phone, living};
+        for (int i = 0; i < labels.length; i++) {
+            form.add(new JLabel(labels[i]));
+            form.add(fields[i]);
+        }
+
+        Object[] options = {"Cancel", "OK"};
+        JOptionPane pane = new JOptionPane(form, JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION, adopterIcon, options, options[1]);
+        JDialog dialog = pane.createDialog(this, editing ? "Edit Adopter Profile" : "Add Adopter Profile");
+        styleOptionButtons(pane);
+        dialog.setVisible(true);
+
+        if (!"OK".equals(pane.getValue())) return null;
+
+        try {
+            AdopterProfile updated = new AdopterProfile(
+                    name.getText().trim(), String.valueOf(gender.getSelectedItem()), address.getText().trim(),
+                    Integer.parseInt(age.getText().trim()), living.getText().trim(), phone.getText().trim());
+            if (updated.getAge() < 18) {
+                showUnderageDialog();
+                return null;
+            }
+
+            if (editing) service.updateProfile(existingProfile, updated);
+            else service.addProfile(updated);
+            showProfileSavedDialog();
+            return updated;
+        } catch (IllegalArgumentException ex) {
+            if (!phone.getText().trim().matches("\\d{10,11}")) {
+                showInvalidInformationDialog("Invalid information entered: invalid phone number.");
+            } else if (ex.getMessage() != null && ex.getMessage().toLowerCase(Locale.ROOT).contains("already exists")) {
+                showInvalidInformationDialog("Invalid information entered: duplicate full name.");
+            } else {
+                showInvalidInformationDialog("Invalid information entered.");
+            }
+            return null;
+        } catch (Exception ex) {
+            showInvalidInformationDialog("Invalid information entered.");
+            return null;
+        }
+    }
+
+    private void styleProfileDropdown(JComboBox<String> dropdown) {
+        dropdown.setPreferredSize(new Dimension(220, 25));
+        dropdown.setMinimumSize(new Dimension(220, 25));
+        dropdown.setBackground(Color.WHITE);
+        dropdown.setForeground(Color.BLACK);
+        dropdown.setOpaque(true);
+        dropdown.setUI(new javax.swing.plaf.basic.BasicComboBoxUI());
+        dropdown.setBorder(BorderFactory.createLineBorder(new Color(210, 210, 210), 1));
+        dropdown.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, false, false);
+                label.setBackground(Color.WHITE);
+                label.setForeground(Color.BLACK);
+                return label;
+            }
+        });
+    }
+
+    private void profileDetailsDialog(AdopterProfile selectedProfile) {
+        JTextArea information = new JTextArea(
+                "Name: " + selectedProfile.getFullName() + "\n"
+                + "Gender: " + selectedProfile.getGender() + "\n"
+                + "Address: " + selectedProfile.getAddress() + "\n"
+                + "Age: " + selectedProfile.getAge() + "\n"
+                + "Phone number: " + selectedProfile.getPhoneNumber() + "\n"
+                + "Living situation: " + selectedProfile.getLivingSituation());
+        information.setEditable(false);
+        information.setOpaque(false);
+        information.setFont(new Font("SansSerif", Font.PLAIN, 16));
+
+        Object[] options = {"Delete", "Edit", "Cancel"};
+        JOptionPane pane = new JOptionPane(information, JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION, loadScaledIcon("/petadoptionsystem/images/adoptinfo.png", 120),
+                options, options[2]);
+        JDialog dialog = pane.createDialog(this, "Adopter Information");
+        styleOptionButtons(pane);
+        fitDialogToButtons(dialog, options.length);
+        dialog.setVisible(true);
+
+        Object selection = pane.getValue();
+        if ("Delete".equals(selection)) {
+            confirmDeleteProfile(selectedProfile);
+        } else if ("Edit".equals(selection)) {
+            profileDialog(selectedProfile, true);
+        }
+    }
+
+    private AdopterProfile selectProfileForAdoption() {
+        DefaultListModel<AdopterProfile> model = new DefaultListModel<>();
+        for (AdopterProfile adopter : service.getProfiles()) {
+            model.addElement(adopter);
+        }
+
+        JList<AdopterProfile> list = new JList<>(model);
+        list.setFont(new Font("SansSerif", Font.PLAIN, 20));
+        list.setFixedCellHeight(34);
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        list.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+                AdopterProfile adopter = (AdopterProfile) value;
+                label.setText(adopter.getFullName() + " — " + adopter.getAge()
+                        + ", " + adopter.getGender());
+                return label;
+            }
+        });
+
+        JLabel title = new JLabel("Select a Profile", SwingConstants.CENTER);
+        title.setFont(new Font("SansSerif", Font.BOLD, 22));
+        title.setBorder(BorderFactory.createEmptyBorder(12, 8, 12, 8));
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
+        JButton add = new JButton("Add New Profile");
+        JButton select = new JButton("Select Profile");
+        JButton cancel = new JButton("Cancel");
+        for (JButton button : new JButton[]{add, select, cancel}) {
+            styleButton(button);
+            buttons.add(button);
+        }
+
+        JPanel content = new JPanel(new BorderLayout(8, 8));
+        content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        content.add(title, BorderLayout.NORTH);
+        content.add(new JScrollPane(list), BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog(this, "Select a Profile", true);
+        dialog.setContentPane(content);
+        dialog.setSize(new Dimension(500, 560));
+        dialog.setLocationRelativeTo(this);
+
+        final AdopterProfile[] selectedProfile = {null};
+        add.addActionListener(e -> {
+            AdopterProfile added = profileDialog(null, false);
+            if (added != null) {
+                model.addElement(added);
+                list.setSelectedValue(added, true);
+            }
+        });
+        select.addActionListener(e -> {
+            AdopterProfile selected = list.getSelectedValue();
+            if (selected != null) {
+                selectedProfile[0] = selected;
+                service.selectProfile(selected);
+                dialog.dispose();
+            }
+        });
+        cancel.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
+        return selectedProfile[0];
+    }
+
+    private boolean showSelectedProfileForAdoption(AdopterProfile selectedProfile) {
+        JTextArea information = new JTextArea(
+                "Name: " + selectedProfile.getFullName() + "\n"
+                + "Gender: " + selectedProfile.getGender() + "\n"
+                + "Address: " + selectedProfile.getAddress() + "\n"
+                + "Age: " + selectedProfile.getAge() + "\n"
+                + "Phone number: " + selectedProfile.getPhoneNumber() + "\n"
+                + "Living situation: " + selectedProfile.getLivingSituation());
+        information.setEditable(false);
+        information.setOpaque(false);
+        information.setFont(new Font("SansSerif", Font.PLAIN, 16));
+
+        Object[] options = {"Cancel", "Proceed"};
+        JOptionPane pane = new JOptionPane(information, JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION,
+                loadScaledIcon("/petadoptionsystem/images/adoptinfo.png", 120),
+                options, options[0]);
+        JDialog dialog = pane.createDialog(this, "Adopter Information");
+        styleOptionButtons(pane);
+        fitDialogToButtons(dialog, options.length);
+        dialog.setVisible(true);
+        return "Proceed".equals(pane.getValue());
+    }
+
+    // Kept for compatibility with the existing appointment workflow.
     private AdopterProfile profileDialog() {
         AdopterProfile existingProfile = service.getProfile();
         ImageIcon adopterIcon = loadScaledIcon(
@@ -926,7 +1228,7 @@ public class ShelterFrame extends JFrame {
             );
 
             Object[] savedOptions = {
-                    "Clear",
+                    "Delete",
                     "Edit",
                     "Cancel"
             };
@@ -954,8 +1256,8 @@ public class ShelterFrame extends JFrame {
 
             Object savedSelection = savedPane.getValue();
 
-            if ("Clear".equals(savedSelection)) {
-                service.setProfile(null);
+            if ("Delete".equals(savedSelection)) {
+                confirmDeleteProfile(existingProfile);
                 return null;
             }
 
@@ -969,11 +1271,9 @@ public class ShelterFrame extends JFrame {
                         ? ""
                         : existingProfile.getFullName()
         );
-        JTextField gender = new JTextField(
-                existingProfile == null
-                        ? ""
-                        : existingProfile.getGender()
-        );
+        JComboBox<String> gender = new JComboBox<>(new String[]{"Female", "Male", "Other"});
+        styleProfileDropdown(gender);
+        if (existingProfile != null) gender.setSelectedItem(existingProfile.getGender());
         JTextField address = new JTextField(
                 existingProfile == null
                         ? ""
@@ -1008,7 +1308,7 @@ public class ShelterFrame extends JFrame {
                 "Living situation:"
         };
 
-        JTextField[] fields = {
+        JComponent[] fields = {
                 name,
                 gender,
                 address,
@@ -1051,7 +1351,7 @@ public class ShelterFrame extends JFrame {
         try {
             AdopterProfile profile = new AdopterProfile(
                     name.getText(),
-                    gender.getText(),
+                    String.valueOf(gender.getSelectedItem()),
                     address.getText(),
                     Integer.parseInt(age.getText()),
                     living.getText(),
@@ -1119,34 +1419,15 @@ public class ShelterFrame extends JFrame {
     }
 
     private void showUnderageDialog() {
-        ImageIcon invalidIcon = loadScaledIcon(
-                "/petadoptionsystem/images/invalidappointment.png",
-                120
-        );
-
-        Object[] options = {
-                "OK"
-        };
-
-        JOptionPane underagePane = new JOptionPane(
-                "You must be at least 18 years old to adopt.",
-                JOptionPane.PLAIN_MESSAGE,
-                JOptionPane.DEFAULT_OPTION,
-                invalidIcon,
-                options,
-                options[0]
-        );
-
-        JDialog underageDialog = underagePane.createDialog(
-                this,
-                "Invalid Appointment"
-        );
-
-        styleOptionButtons(underagePane);
-        underageDialog.setVisible(true);
+        showInvalidInformationDialog(
+                "Invalid information entered: must be at least 18 to adopt.");
     }
 
     private void showInvalidInformationDialog() {
+        showInvalidInformationDialog("Invalid information entered.");
+    }
+
+    private void showInvalidInformationDialog(String message) {
         ImageIcon invalidIcon = loadScaledIcon(
                 "/petadoptionsystem/images/invalidappointment.png",
                 120
@@ -1157,7 +1438,7 @@ public class ShelterFrame extends JFrame {
         };
 
         JOptionPane invalidPane = new JOptionPane(
-                "Invalid information entered.",
+                message,
                 JOptionPane.PLAIN_MESSAGE,
                 JOptionPane.DEFAULT_OPTION,
                 invalidIcon,
@@ -1172,6 +1453,27 @@ public class ShelterFrame extends JFrame {
 
         styleOptionButtons(invalidPane);
         invalidDialog.setVisible(true);
+    }
+
+    private void confirmDeleteProfile(AdopterProfile selectedProfile) {
+        ImageIcon noAppointmentsIcon = loadScaledIcon(
+                "/petadoptionsystem/images/noappsfound.png", 120);
+        Object[] options = {"Yes", "No"};
+        JOptionPane confirmationPane = new JOptionPane(
+                "Are you sure you want to delete this profile?",
+                JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION,
+                noAppointmentsIcon,
+                options,
+                options[1]);
+        JDialog confirmationDialog = confirmationPane.createDialog(this, "Delete Profile");
+        styleOptionButtons(confirmationPane);
+        fitDialogToButtons(confirmationDialog, options.length);
+        confirmationDialog.setVisible(true);
+
+        if ("Yes".equals(confirmationPane.getValue())) {
+            service.removeProfile(selectedProfile);
+        }
     }
 
     private void appointmentsDialog() {
